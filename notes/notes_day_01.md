@@ -302,8 +302,6 @@ source code
 
 where my python scripts go
 
-
-
 # Is there a VS Code equivalent of .Rproj?
 
 Kind of, but not exactly.
@@ -318,15 +316,11 @@ or when you open the folder manually:
 
 File → Open Folder
 
-.Rproj is useful for RStudio.
-VS Code does not need an equivalent yet.
-Opening the folder in VS Code is enough.
-
+.Rproj is useful for RStudio. VS Code does not need an equivalent yet. Opening the folder in VS Code is enough.
 
 You seem to have two history files:
 
-.Rhistory
-notes/.Rhistory
+.Rhistory notes/.Rhistory
 
 They are not necessarily the same. The one inside notes/ may have been created because R or RStudio was opened while the working directory was notes/.
 
@@ -334,16 +328,16 @@ Day 1 is done.
 
 You completed the real setup work:
 
-- Created the project folder
--  Initialized Git
--  Created the GitHub repo
--  Connected local repo to GitHub with SSH
--  Made the initial push
--  Created README.md
--  Created .gitignore
--  Created requirements.txt
--  Created notes/notes_day_01.md
--  Added extra Git/VS Code setup notes
--  Created basic folders: data/, notes/, src/
--  Set up/activated the Python virtual environment
-- created a local LICENSE file thats synched to GitHub
+-   Created the project folder
+-   Initialized Git
+-   Created the GitHub repo
+-   Connected local repo to GitHub with SSH
+-   Made the initial push
+-   Created README.md
+-   Created .gitignore
+-   Created requirements.txt
+-   Created notes/notes_day_01.md
+-   Added extra Git/VS Code setup notes
+-   Created basic folders: data/, notes/, src/
+-   Set up/activated the Python virtual environment
+-   created a local LICENSE file thats synched to GitHub
