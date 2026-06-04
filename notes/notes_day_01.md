@@ -179,3 +179,113 @@ Today I started the Operations Analytics & Cloud Data Pipeline project.
 The main goal was not to do analysis yet, but to set up the project professionally.
 
 This matters because a clean GitHub project should show employers that I can organize technical work clearly and reproducibly.
+
+
+
+
+# Useful git commands
+
+instead of typing
+
+cd p
+cd operations...
+
+just do 
+
+cd p/operations-analytics-cloud-pipeline
+
+and it goes to the directory at once
+
+
+type "code ." in git bash to open the whole directory in VS Code, useful
+
+
+# Virtual Environments
+
+- it is a seperate Python workspace for a certain project
+
+if you dont work on a virtual environment, all your packages get installed 
+onto your general computer Python
+
+a virtual environment allows your project to have its own isolated package folder
+this is the .venv/ that exists in your project folder
+
+when we install:
+
+pandas
+numpy
+scikit-learn
+jupyter
+statsmodels
+
+they belong to this project’s .venv, not your whole computer
+
+Why?
+
+different projects may need different packages.
+
+Example:
+
+Operations pipeline project: 	pandas, scikit-learn, statsmodels, SQLAlchemy
+Old R/Shiny project:        	mostly R packages
+Future ML project:          	PyTorch, TensorFlow, transformers
+Small script:               	maybe only pandas
+
+so as you can see, each project has its own packages
+and
+its own versions of packages!
+
+The virtual environment prevents package conflicts and makes the project reproducible
+
+
+The professional workflow:
+
+Project folder
+→ .venv
+→ requirements.txt
+→ GitHub repo
+
+
+You create the virtual environment only once per project:
+
+python -m venv .venv
+
+After that, the .venv folder stays inside the project.
+
+
+However, you have to activate the virtual environment every time you open a fresh terminal!
+
+how to activate:
+source .venv/Scripts/activate
+
+
+Then you should see:
+
+(.venv)
+
+That tells you: I am now using the project Python environment.
+
+
+Check 1: Look for (.venv)
+
+You want to see this at the beginning of the terminal line:
+
+(.venv) Peter Enis@DESKTOP...
+
+Check 2: Run this
+which python
+
+When .venv is active, it should show something like:
+
+/p/operations-analytics-cloud-pipeline/.venv/Scripts/python
+
+This means Python is coming from your project.
+
+This means your terminal is using the Python inside your project’s .venv. So yes, you are working inside the virtual environment
+
+terminal with git bash: 
+
+ctrl + c 
+
+to cancel running process that could be freezing up your terminal
+
