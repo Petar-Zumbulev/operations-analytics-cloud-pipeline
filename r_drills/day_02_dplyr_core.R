@@ -25,6 +25,8 @@
 # Run this once if packages are missing:
 # install.packages(c("dplyr", "tibble", "lubridate", "readr", "stringr"))
 
+# dplyr is the main package for data manipulation, working with dataframes
+# dplyr contains filter() mutate() group_by() summarise()
 library(dplyr)
 library(tibble)
 library(lubridate)
@@ -144,11 +146,25 @@ orders_clean <- orders_raw %>%
     # Parse messy date formats into a proper date column
     # mutate() is for creating business/analysis variables
     order_date = as_date(parse_date_time(
+      
+      # this tells us to use the column order_date_raw for the parsing
       order_date_raw,
+      
+      # this is an argument passed into the function parse_date_time()
+      # it is an argument structured like a column, and it tells R that 
+      # the dates could be in a few different formats
       orders = c("ymd", "dmy", "Y/m/d", "b d Y")
     )),
     
     # Standardize country values
+    # thanks to mutate() we add the column country_clean with this command
+    # case_when() means if the condition is true, then add/return this given value
+    # which is Germany, or France, or Spain, or Other
+    # and we do str_to_lower before that for any values in the column country
+    # so that its easy for us to go through them and categorize them
+    # this works for this simple example with 13 rows, but if I had a big dataset
+    # with 2 million rows, I would check all the unique values first in the 
+    # column country, and then include them all in my case_when() 
     country_clean = case_when(
       str_to_lower(country) %in% c("germany", "de") ~ "Germany",
       str_to_lower(country) %in% c("france", "fr") ~ "France",
@@ -157,6 +173,7 @@ orders_clean <- orders_raw %>%
     ),
     
     # Standardize sales channels
+    # same idea, replacing values with case_when()
     sales_channel_clean = case_when(
       str_to_lower(sales_channel) %in% c("paid search", "paid_search") ~ "Paid Search",
       str_to_lower(sales_channel) == "organic" ~ "Organic",
@@ -166,6 +183,7 @@ orders_clean <- orders_raw %>%
     ),
     
     # Standardize product category
+    # str_to_title() converts text so that the first letter of each word is uppercase
     product_category_clean = str_to_title(product_category),
     
     # Business metrics
@@ -174,6 +192,8 @@ orders_clean <- orders_raw %>%
     revenue_per_item = net_revenue / items_count,
     
     # Boolean / flag variables
+    # the creation of boolean columns is something I did not think about
+    # but it is relavant and useful for further analysis
     is_completed = order_status == "completed",
     is_returned = order_status == "returned",
     is_cancelled = order_status == "cancelled",

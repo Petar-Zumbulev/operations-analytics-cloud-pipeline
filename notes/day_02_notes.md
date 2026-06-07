@@ -2,26 +2,36 @@
 
 Core verbs you’ll constantly use in analytics jobs:
 
-filter() → keep relevant rows
-mutate() → create business variables
-group_by() + summarise() → calculate KPIs
-arrange() → rank results
-case_when() → clean messy categories
+filter() → keep relevant rows mutate() → create business variables group_by() + summarise() → calculate KPIs arrange() → rank results case_when() → clean messy categories
+
+
+1. you get messy data
+
+2. the first thing is to clean it, use mutate() to create your clean columns
+
+  - this is the first layer of analysis, cleaning using mutate()
+
+3. then you use group_by() and summarise() to group by customer type, or country
+  and then summarize the most important kpis for each group
+  
+  - so group_by() and summarise() are the second layer of analysis
+
+
 
 ## Goal
 
 Today I practiced the most important core `dplyr` verbs for business analytics:
 
-- `filter()`
-- `mutate()`
-- `group_by()`
-- `summarise()`
-- `arrange()`
-- `case_when()`
+-   `filter()`
+-   `mutate()`
+-   `group_by()`
+-   `summarise()`
+-   `arrange()`
+-   `case_when()`
 
 The business context was a small operations/e-commerce order dataset.
 
----
+------------------------------------------------------------------------
 
 ## Key R verbs
 
@@ -31,7 +41,7 @@ The business context was a small operations/e-commerce order dataset.
 
 Example:
 
-```r
+``` r
 completed_orders <- orders_clean %>%
   filter(is_completed == TRUE)
 ```
@@ -40,7 +50,7 @@ Business meaning:
 
 This lets me analyze only completed orders instead of mixing completed, returned, and cancelled orders.
 
----
+------------------------------------------------------------------------
 
 ### `mutate()`
 
@@ -48,7 +58,7 @@ This lets me analyze only completed orders instead of mixing completed, returned
 
 Example:
 
-```r
+``` r
 orders_clean <- orders_raw %>%
   mutate(
     net_revenue = gross_sales - discount,
@@ -60,7 +70,7 @@ Business meaning:
 
 This creates useful analytical variables like net revenue and completion flags.
 
----
+------------------------------------------------------------------------
 
 ### `group_by()` and `summarise()`
 
@@ -68,7 +78,7 @@ This creates useful analytical variables like net revenue and completion flags.
 
 Example:
 
-```r
+``` r
 country_kpis <- orders_clean %>%
   group_by(country_clean) %>%
   summarise(
@@ -83,7 +93,7 @@ Business meaning:
 
 This allows me to compare performance across countries, channels, product categories, or customer segments.
 
----
+------------------------------------------------------------------------
 
 ### `arrange()`
 
@@ -91,7 +101,7 @@ This allows me to compare performance across countries, channels, product catego
 
 Example:
 
-```r
+``` r
 country_kpis <- country_kpis %>%
   arrange(desc(total_net_revenue))
 ```
@@ -100,7 +110,7 @@ Business meaning:
 
 This helps identify the best-performing countries, channels, or categories.
 
----
+------------------------------------------------------------------------
 
 ### `case_when()`
 
@@ -108,7 +118,7 @@ This helps identify the best-performing countries, channels, or categories.
 
 Example:
 
-```r
+``` r
 country_clean = case_when(
   str_to_lower(country) %in% c("germany", "de") ~ "Germany",
   str_to_lower(country) %in% c("france", "fr") ~ "France",
@@ -123,40 +133,40 @@ This fixes inconsistent categories so KPI results are not split across messy lab
 
 For example, without cleaning:
 
-- `"Germany"`
-- `"germany"`
-- `"DE"`
+-   `"Germany"`
+-   `"germany"`
+-   `"DE"`
 
 would be treated as three different countries.
 
----
+------------------------------------------------------------------------
 
 ## Important data types from `glimpse()`
 
 Today I also used:
 
-```r
+``` r
 glimpse(orders_raw)
 ```
 
 `glimpse()` gives a quick overview of:
 
-- number of rows
-- number of columns
-- column names
-- column data types
-- example values
+-   number of rows
+-   number of columns
+-   column names
+-   column data types
+-   example values
 
 Common data types:
 
-| Type | Meaning | Example |
-|---|---|---|
-| `<chr>` | character / text | `"Germany"`, `"O001"` |
-| `<dbl>` | numeric / double | `120`, `4.99`, `4500` |
-| `<int>` | integer | `1L`, `20L` |
-| `<lgl>` | logical / boolean | `TRUE`, `FALSE` |
-| `<date>` | date | `2026-01-03` |
-| `<dttm>` | date-time | `2026-01-03 14:30:00` |
+| Type     | Meaning           | Example               |
+|----------|-------------------|-----------------------|
+| `<chr>`  | character / text  | `"Germany"`, `"O001"` |
+| `<dbl>`  | numeric / double  | `120`, `4.99`, `4500` |
+| `<int>`  | integer           | `1L`, `20L`           |
+| `<lgl>`  | logical / boolean | `TRUE`, `FALSE`       |
+| `<date>` | date              | `2026-01-03`          |
+| `<dttm>` | date-time         | `2026-01-03 14:30:00` |
 
 Important note:
 
@@ -164,14 +174,14 @@ Important note:
 
 Example:
 
-```r
+``` r
 gross_sales = c(120, 85, 240)
 shipping_fee = c(4.99, 6.99, 3.99)
 ```
 
 Both can be stored as `<dbl>`.
 
----
+------------------------------------------------------------------------
 
 ## KPI answers
 
@@ -179,31 +189,31 @@ Both can be stored as `<dbl>`.
 
 Answer:
 
-```text
+``` text
 Write answer here after running the script.
 ```
 
----
+------------------------------------------------------------------------
 
 ### 2. Which sales channel had the highest total net revenue?
 
 Answer:
 
-```text
+``` text
 Write answer here after running the script.
 ```
 
----
+------------------------------------------------------------------------
 
 ### 3. Which product category had the highest return rate?
 
 Answer:
 
-```text
+``` text
 Write answer here after running the script.
 ```
 
----
+------------------------------------------------------------------------
 
 ### 4. What does average_order_value mean in this dataset?
 
@@ -213,7 +223,7 @@ Average order value means the average net revenue per order.
 
 Formula:
 
-```text
+``` text
 average_order_value = mean(net_revenue)
 ```
 
@@ -221,7 +231,7 @@ Example interpretation:
 
 If average order value is 150, then the average order generated 150 EUR in net revenue before considering more advanced adjustments such as returns, refunds, or costs.
 
----
+------------------------------------------------------------------------
 
 ### 5. Why is the 4500 gross_sales order suspicious?
 
@@ -231,16 +241,16 @@ The 4500 order is suspicious because it is much larger than the other orders.
 
 It could be:
 
-- a real high-value order
-- a data entry error
-- a duplicate issue
-- a currency issue
-- a business-to-business bulk order
-- an outlier that needs investigation
+-   a real high-value order
+-   a data entry error
+-   a duplicate issue
+-   a currency issue
+-   a business-to-business bulk order
+-   an outlier that needs investigation
 
 In real data work, I should not delete it immediately. I should first flag it, investigate it, and decide how to treat it depending on the business context.
 
----
+------------------------------------------------------------------------
 
 ### 6. What is the difference between gross_sales and net_revenue?
 
@@ -252,19 +262,19 @@ Net revenue subtracts discounts.
 
 Formula:
 
-```text
+``` text
 net_revenue = gross_sales - discount
 ```
 
 Example:
 
-```text
+``` text
 gross_sales = 120
 discount = 10
 net_revenue = 110
 ```
 
----
+------------------------------------------------------------------------
 
 ### 7. Why do we clean "DE", "Germany", and "germany" into one value?
 
@@ -277,18 +287,18 @@ If we do not standardize them, Germany would be split into multiple categories a
 Bad version:
 
 | country | revenue |
-|---|---:|
-| Germany | 500 |
-| germany | 200 |
-| DE | 300 |
+|---------|--------:|
+| Germany |     500 |
+| germany |     200 |
+| DE      |     300 |
 
 Better version:
 
 | country_clean | revenue |
-|---|---:|
-| Germany | 1000 |
+|---------------|--------:|
+| Germany       |    1000 |
 
----
+------------------------------------------------------------------------
 
 ### 8. Why should cancelled and returned orders be treated carefully in KPI reporting?
 
@@ -298,27 +308,27 @@ Cancelled and returned orders can make KPIs misleading if they are treated like 
 
 For example:
 
-- completed orders may count toward real revenue
-- returned orders may need to reduce revenue
-- cancelled orders may need to be excluded from revenue
-- return rate is an important business KPI by itself
+-   completed orders may count toward real revenue
+-   returned orders may need to reduce revenue
+-   cancelled orders may need to be excluded from revenue
+-   return rate is an important business KPI by itself
 
 In real reporting, I need to clearly define whether my KPI uses:
 
-- all orders
-- only completed orders
-- completed orders minus returns
-- gross revenue
-- net revenue
-- refunded-adjusted revenue
+-   all orders
+-   only completed orders
+-   completed orders minus returns
+-   gross revenue
+-   net revenue
+-   refunded-adjusted revenue
 
----
+------------------------------------------------------------------------
 
 ## Optional challenge answer
 
 Create a summary table grouped by both country and sales channel:
 
-```r
+``` r
 country_channel_kpis <- orders_clean %>%
   group_by(country_clean, sales_channel_clean) %>%
   summarise(
@@ -339,29 +349,29 @@ This shows which country-channel combinations perform best.
 
 For example, instead of only asking:
 
-```text
+``` text
 Which country performs best?
 ```
 
 or:
 
-```text
+``` text
 Which sales channel performs best?
 ```
 
 I can ask a more specific question:
 
-```text
+``` text
 Which sales channel performs best inside each country?
 ```
 
----
+------------------------------------------------------------------------
 
 ## Main workflow pattern
 
 The main analytics pattern from today was:
 
-```r
+``` r
 raw_data %>%
   mutate(cleaned_columns_and_business_metrics) %>%
   filter(relevant_rows) %>%
@@ -374,46 +384,46 @@ This pattern is central in analyst work.
 
 It is used for:
 
-- country performance
-- channel performance
-- product category performance
-- customer segment analysis
-- revenue reporting
-- conversion reporting
-- operational KPI reporting
+-   country performance
+-   channel performance
+-   product category performance
+-   customer segment analysis
+-   revenue reporting
+-   conversion reporting
+-   operational KPI reporting
 
----
+------------------------------------------------------------------------
 
 ## What I learned today
 
-- I refreshed the core `dplyr` workflow.
-- I practiced turning raw order data into KPI-ready data.
-- I cleaned messy categories using `case_when()`.
-- I calculated business KPIs by country, channel, and product category.
-- I created basic data quality checks.
-- I exported KPI tables as CSV files.
-- I practiced reading column types with `glimpse()`.
+-   I refreshed the core `dplyr` workflow.
+-   I practiced turning raw order data into KPI-ready data.
+-   I cleaned messy categories using `case_when()`.
+-   I calculated business KPIs by country, channel, and product category.
+-   I created basic data quality checks.
+-   I exported KPI tables as CSV files.
+-   I practiced reading column types with `glimpse()`.
 
----
+------------------------------------------------------------------------
 
 ## End-of-day deliverables
 
-- `r_drills/day_02_dplyr_core.R`
-- `notes/notes_day_02.md`
-- `outputs/tables/day_02_total_kpi_summary_r.csv`
-- `outputs/tables/day_02_country_kpis_r.csv`
-- `outputs/tables/day_02_channel_kpis_r.csv`
-- `outputs/tables/day_02_category_kpis_r.csv`
-- `outputs/tables/day_02_data_quality_summary_r.csv`
+-   `r_drills/day_02_dplyr_core.R`
+-   `notes/notes_day_02.md`
+-   `outputs/tables/day_02_total_kpi_summary_r.csv`
+-   `outputs/tables/day_02_country_kpis_r.csv`
+-   `outputs/tables/day_02_channel_kpis_r.csv`
+-   `outputs/tables/day_02_category_kpis_r.csv`
+-   `outputs/tables/day_02_data_quality_summary_r.csv`
 
----
+------------------------------------------------------------------------
 
 ## Next day preview
 
 Day 03 will continue R repetition with:
 
-- `left_join()`
-- `pivot_longer()`
-- `pivot_wider()`
-- `ggplot2`
-- reporting plots
+-   `left_join()`
+-   `pivot_longer()`
+-   `pivot_wider()`
+-   `ggplot2`
+-   reporting plots
