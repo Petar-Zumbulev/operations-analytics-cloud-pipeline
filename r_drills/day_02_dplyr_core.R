@@ -315,6 +315,9 @@ category_kpis <- orders_clean %>%
     total_items_sold = sum(items_count),
     average_revenue_per_item = mean(revenue_per_item),
     return_rate = mean(is_returned),
+    
+    # .groups = 'drop' is important because it drops the grouping structure so that
+    # later calculations arent affected
     .groups = "drop"
   ) %>%
   arrange(desc(total_net_revenue))
@@ -373,27 +376,95 @@ write_csv(data_quality_summary, "outputs/tables/day_02_data_quality_summary_r.cs
 # 14. Practice questions
 # ------------------------------------------------------------
 
-# After running the script, answer these in notes/notes_day_02.md:
+# After running the script, answer these:
 #
 # 1. Which country generated the highest total net revenue?
+
+# Germany
+
+
 # 2. Which sales channel had the highest total net revenue?
+
+# Organic
+
+
 # 3. Which product category had the highest return rate?
+
+# Home
+
+
 # 4. What does average_order_value mean in this dataset?
+
+# the average of the net revenue per order, meaning revenue after removing discount
+
+
 # 5. Why is the 4500 gross_sales order suspicious?
+
+# It's an outlier, and could possibly be a data entry error
+# In real data cleaning, I should flag it and investigate it before deciding 
+# whether to keep, cap, transform, or remove it
+
+
 # 6. What is the difference between gross_sales and net_revenue?
+
+# gross sales is just the amount sold, and net revenue removes the discount because the
+# discount shouldnt be counted towards net revenue
+
+
 # 7. Why do we clean "DE", "Germany", and "germany" into one value?
+
+# They all represent the same country/grouping
+# It is important for later KPI analysis such as group by, if we dont group
+# these into one group, then we could have wrong values for Germany
+
+
 # 8. Why should cancelled and returned orders be treated carefully in KPI reporting?
+
+# because they shouldn't be counted towards revenue
+
+
 #
 # Optional challenge:
+
 # Create a new summary table that groups by both:
 # - country_clean
 # - sales_channel_clean
+
+country_and_sales_channel <- orders_clean %>%
+  group_by(country_clean, sales_channel_clean) %>%
+  summarise(
+    orders = n(),
+    completed_orders = sum(is_completed),
+    total_net_revenue = sum(net_revenue),
+    average_order_value = mean(net_revenue),
+    total_sessions = sum(sessions),
+    conversion_rate = completed_orders / total_sessions,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(total_net_revenue))
+
 #
 # Then calculate:
 # - orders
 # - completed_orders
 # - total_net_revenue
 # - average_order_value
+
+
+
+# The important thing today is not memorizing syntax. It is understanding this pattern:
+#  
+#  raw data
+# %>% clean with mutate()
+# %>% filter relevant records
+# %>% group_by business dimension
+# %>% summarise KPIs
+# %>% arrange results
+#
+# That pattern is basically the heart of analyst work.
+
+
+
 
 
 print("Day 02 dplyr core drills complete.")
