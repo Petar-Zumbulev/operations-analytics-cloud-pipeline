@@ -22,9 +22,11 @@ dir.create("outputs/figures", recursive = TRUE, showWarnings = FALSE)
 # Important idea:
 # Each table has a "grain".
 #
+# this is the idea of granularity
+#
 # customers_raw: one row should be one customer
 # orders: one row should be one order
-# order_items: one row should be one product inside one order
+# order_items: one row should be the products/items inside one order
 # products_raw: one row should be one product
 #
 # We intentionally include a few messy problems:
@@ -47,6 +49,8 @@ customers_raw <- tibble(
   ))
 )
 
+# granularity: every row here represents a single order. Keep this granularity 
+# later with joins
 orders <- tibble(
   order_id = c("O001", "O002", "O003", "O004", "O005", "O006", "O007", "O008"),
   customer_id = c("C001", "C002", "C003", "C004", "C005", "C999", "C002", "C003"),
@@ -72,6 +76,9 @@ orders <- tibble(
   )
 )
 
+# one row here is the products/items within a certain order, so one row shows
+# the amount of products/items within a given order. Thats why we have the 
+# column quantity
 order_items <- tibble(
   order_id = c("O001", "O001", "O002", "O003", "O004", "O005", "O006", "O007", "O008", "O008"),
   product_id = c("P001", "P002", "P001", "P003", "P004", "P002", "P001", "P999", "P003", "P004"),
