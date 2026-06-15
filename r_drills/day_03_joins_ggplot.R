@@ -100,6 +100,49 @@ marketing_wide <- tibble(
   email_spend = c(300, 350, 400)
 )
 
+
+#--------------------------
+# Granularity:
+# 
+# customers_raw granularity: one row represents one customer
+#
+# products_raw granularity: one row represents one product
+#
+# orders granularity: one row represents one order
+#
+# order_items granularity: one row represents one product line inside an order 
+# * important: this more complex granularity is because we have the columns order_id and
+# product_id, which mean the granularity is more specific
+#
+#
+# key idea: grain means “what one row represents”
+#
+# Tables do not need the same granularity, but I need to understand the 
+# relationship between their granularities before joining
+#
+# example: many-to-one join:
+# many rows per customer for the orders table and one row per customer for 
+# another table, and when you join them its many-to-one and the granularity 
+# makes sense because many orders can belong to one customer
+#
+# Granularity means what one row represents in a table. In customers_raw, one 
+# row should represent one customer. In products_raw, one row should represent 
+# one product. In orders, one row represents one order. In order_items, one row 
+# represents one product line inside an order, so the same order can appear 
+# multiple times. In marketing_wide, one row represents one month, but the 
+# marketing channels are stored as separate columns. After pivoting longer, the 
+# grain becomes one row per month and channel.
+# I need to keep these granularities in mind when joining tables because 
+# joins can change the row count and the meaning of each row. Tables do not 
+# always need the same granularity, but I need to understand whether the join 
+# is one-to-one, many-to-one, one-to-many, or many-to-many. If I join at the 
+# wrong grain, I can accidentally duplicate rows and inflate KPIs like revenue, 
+# order count, or marketing spend.
+#
+#
+#-------------------------
+
+
 # ------------------------------------------------------------
 # 2. Inspect tables
 # ------------------------------------------------------------
