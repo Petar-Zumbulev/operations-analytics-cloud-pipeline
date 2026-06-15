@@ -92,6 +92,7 @@ products_raw <- tibble(
   brand = c("BrandA", "BrandB", "BrandC", "BrandD", "BrandD")
 )
 
+# one row represents the marketing budget for a given month
 marketing_wide <- tibble(
   month = c("2026-01", "2026-02", "2026-03"),
   paid_search_spend = c(2000, 2400, 2600),
