@@ -637,3 +637,416 @@ Professional checklist before joining:
 
 
 
+
+
+
+## More examples: duplicate checks and `anti_join()` checks
+
+In the Day 3 script, I already used two important data quality techniques:
+
+1. Filtering for duplicate keys
+2. Using `anti_join()` to find rows with no match in another table
+
+These are important because joins can silently create wrong KPIs if the data 
+has duplicate IDs or missing matches.
+
+---
+
+# Part 1: Filtering for duplicate rows or duplicate keys
+
+A duplicate check asks:
+
+> Does an ID or combination of IDs appear more times than expected?
+
+This matters because if a table is supposed to have one row per ID, duplicated IDs can multiply rows after a join.
+
+---
+
+## Duplicate example 1: duplicate order IDs in `orders`
+
+### Table structure
+
+The `orders` table has this grain:
+
+> one row per order
+
+Example:
+
+| order_id | customer_id | order_date | sales_channel |
+|---|---|---|---|
+| O001 | C001 | 2026-03-01 | Paid Search |
+| O002 | C002 | 2026-03-01 | Organic |
+| O003 | C003 | 2026-03-02 | Email |
+| O003 | C003 | 2026-03-02 | Email |
+
+In a clean `orders` table, each `order_id` should appear only once.
+
+Here, `O003` appears twice.
+
+That is suspicious because `orders` is supposed to be order-level data.
+
+### R code
+
+    duplicate_orders <- orders %>%
+      count(order_id) %>%
+      filter(n > 1)
+
+    duplicate_orders
+
+### What the code does
+
+This part:
+
+    count(order_id)
+
+counts how often each `order_id` appears.
+
+Example result:
+
+| order_id | n |
+|---|---:|
+| O001 | 1 |
+| O002 | 1 |
+| O003 | 2 |
+
+This part:
+
+    filter(n > 1)
+
+keeps only the order IDs that appear more than once.
+
+So the final result would show:
+
+| order_id | n |
+|---|---:|
+| O003 | 2 |
+
+### Why this matters
+
+If I join `orders` to another table and `orders` already has duplicate order IDs, I may count the same order twice.
+
+This could inflate:
+
+- number of orders
+- revenue
+- average order value
+- customer purchase frequency
+- conversion rate
+
+The key lesson:
+
+> If a table should have one row per order, then duplicate `order_id` values are a data quality problem that must be investigated.
+
+---
+
+## Duplicate example 2: duplicate order-product combinations in `order_items`
+
+### Table structure
+
+The `order_items` table has this grain:
+
+> one row per product inside an order
+
+Example:
+
+| order_id | product_id | quantity | unit_price |
+|---|---|---:|---:|
+| O001 | P001 | 1 | 49.99 |
+| O001 | P002 | 2 | 19.99 |
+| O002 | P001 | 1 | 49.99 |
+| O002 | P001 | 1 | 49.99 |
+
+In many e-commerce systems, one order-product combination should appear only once.
+
+That means `O002` and `P001` should usually appear as one row, not two rows.
+
+The expected clean version would often be:
+
+| order_id | product_id | quantity | unit_price |
+|---|---|---:|---:|
+| O002 | P001 | 2 | 49.99 |
+
+Instead of two separate duplicate rows.
+
+### R code
+
+    duplicate_order_products <- order_items %>%
+      count(order_id, product_id) %>%
+      filter(n > 1)
+
+    duplicate_order_products
+
+### What the code does
+
+This part:
+
+    count(order_id, product_id)
+
+counts how often each order-product combination appears.
+
+Example result:
+
+| order_id | product_id | n |
+|---|---|---:|
+| O001 | P001 | 1 |
+| O001 | P002 | 1 |
+| O002 | P001 | 2 |
+
+This part:
+
+    filter(n > 1)
+
+keeps only combinations that appear more than once.
+
+So the result would show:
+
+| order_id | product_id | n |
+|---|---|---:|
+| O002 | P001 | 2 |
+
+### Why this matters
+
+This kind of duplicate is more subtle than just checking one ID.
+
+Here, `order_id` can appear multiple times because one order can contain multiple products.
+
+So this would be wrong:
+
+    order_items %>%
+      count(order_id) %>%
+      filter(n > 1)
+
+Why?
+
+Because an order appearing multiple times in `order_items` is normal.
+
+The correct check is usually based on the combination:
+
+    order_id + product_id
+
+The key lesson:
+
+> In detailed tables, duplicates often need to be checked using a combination of columns, not just one ID.
+
+---
+
+# Part 2: `anti_join()` checks for no matches
+
+An `anti_join()` asks:
+
+> Which rows in table A do not have a matching row in table B?
+
+This is useful for finding broken relationships between tables.
+
+The structure is:
+
+    table_a %>%
+      anti_join(table_b, by = "matching_column")
+
+This returns rows from `table_a` where the key does not exist in `table_b`.
+
+---
+
+## `anti_join()` example 1: customers with no orders
+
+### Table structure
+
+The `customers_raw` table has this grain:
+
+> one row per customer
+
+Example:
+
+| customer_id | country | segment |
+|---|---|---|
+| C001 | Germany | New |
+| C002 | Germany | Returning |
+| C003 | France | VIP |
+| C004 | Spain | New |
+
+The `orders` table has this grain:
+
+> one row per order
+
+Example:
+
+| order_id | customer_id | order_date |
+|---|---|---|
+| O001 | C001 | 2026-03-01 |
+| O002 | C002 | 2026-03-01 |
+| O003 | C001 | 2026-03-02 |
+
+Notice that customer `C003` and customer `C004` do not appear in the `orders` table.
+
+That means they are customers with no orders.
+
+### R code
+
+    customers_without_orders <- customers_raw %>%
+      distinct(customer_id, .keep_all = TRUE) %>%
+      anti_join(orders %>% distinct(customer_id), by = "customer_id")
+
+    customers_without_orders
+
+### What the code does
+
+This part:
+
+    customers_raw %>%
+      distinct(customer_id, .keep_all = TRUE)
+
+makes sure each customer appears only once before doing the check.
+
+This part:
+
+    orders %>%
+      distinct(customer_id)
+
+creates a list of customers who have placed at least one order.
+
+This part:
+
+    anti_join(..., by = "customer_id")
+
+keeps customers from `customers_raw` whose `customer_id` does not appear in `orders`.
+
+Example result:
+
+| customer_id | country | segment |
+|---|---|---|
+| C003 | France | VIP |
+| C004 | Spain | New |
+
+### Why this matters
+
+This is not always an error.
+
+Some customers may have signed up but not ordered yet.
+
+That can be useful for business questions like:
+
+- How many registered customers never purchased?
+- Which countries have many signups but few orders?
+- How can marketing convert inactive customers?
+- Should we build an activation KPI?
+
+The key lesson:
+
+> `anti_join()` is not only for finding errors. It can also find important business cases, such as customers who signed up but never ordered.
+
+---
+
+## `anti_join()` example 2: orders with no order items
+
+### Table structure
+
+The `orders` table has this grain:
+
+> one row per order
+
+Example:
+
+| order_id | customer_id | order_date |
+|---|---|---|
+| O001 | C001 | 2026-03-01 |
+| O002 | C002 | 2026-03-01 |
+| O003 | C003 | 2026-03-02 |
+| O004 | C004 | 2026-03-03 |
+
+The `order_items` table has this grain:
+
+> one row per product inside an order
+
+Example:
+
+| order_id | product_id | quantity |
+|---|---|---:|
+| O001 | P001 | 1 |
+| O001 | P002 | 2 |
+| O002 | P001 | 1 |
+| O003 | P003 | 3 |
+
+Notice that order `O004` exists in the `orders` table but does not appear in `order_items`.
+
+That is suspicious.
+
+If an order exists, we usually expect it to contain at least one product.
+
+### R code
+
+    orders_without_items <- orders %>%
+      anti_join(order_items %>% distinct(order_id), by = "order_id")
+
+    orders_without_items
+
+### What the code does
+
+This part:
+
+    order_items %>%
+      distinct(order_id)
+
+creates a list of all orders that have at least one item.
+
+This part:
+
+    orders %>%
+      anti_join(..., by = "order_id")
+
+keeps only orders whose `order_id` does not appear in `order_items`.
+
+Example result:
+
+| order_id | customer_id | order_date |
+|---|---|---|
+| O004 | C004 | 2026-03-03 |
+
+### Why this matters
+
+An order with no order items could mean:
+
+- incomplete data load
+- cancelled order
+- deleted order items
+- source-system error
+- wrong join key
+- timing issue between systems
+- data extraction problem
+
+For KPI reporting, this is important because an order without items may have no revenue.
+
+If I count it as a normal order, it could affect:
+
+- order count
+- average order value
+- conversion rate
+- revenue per order
+- operational reporting
+
+The key lesson:
+
+> `anti_join()` can detect parent records that have no child records, such as orders with no order items.
+
+---
+
+# Summary
+
+Duplicate checks and `anti_join()` checks answer different questions.
+
+| Check type | Main question | Example |
+|---|---|---|
+| duplicate check | Does this ID appear more often than expected? | duplicate `customer_id` in customers |
+| duplicate combination check | Does this combination appear more often than expected? | duplicate `order_id + product_id` in order_items |
+| `anti_join()` check | Which rows have no match in another table? | orders with unknown customers |
+| `anti_join()` business check | Which valid rows have no related activity? | customers with no orders |
+| `anti_join()` relationship check | Which parent records have no child records? | orders with no order items |
+
+Professional data quality checklist:
+
+1. Check whether key columns are unique where they should be unique.
+2. Check duplicate combinations in detailed tables.
+3. Use `anti_join()` to find unmatched foreign keys.
+4. Use `anti_join()` to find business cases like customers with no orders.
+5. Use `anti_join()` to find parent records with missing child records.
+6. Investigate suspicious results before calculating KPIs.
+7. Save important checks as data quality reports later in the pipeline.

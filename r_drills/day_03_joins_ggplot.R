@@ -163,6 +163,8 @@ glimpse(marketing_wide)
 # Example: if customer C003 appears twice in customers, then every order
 # from C003 can appear twice after the join.
 
+# creating a new table which checks for duplicate rows in the customers table
+# need to filter for this before joining
 duplicate_customers <- customers_raw %>%
   count(customer_id) %>%
   filter(n > 1)
