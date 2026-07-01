@@ -625,7 +625,7 @@ The key lesson:
 Before every join, I should identify the relationship:
 
 | Join type | Example | Expected row-count behavior |
-|------------------------|------------------------|------------------------|
+|----|----|----|
 | many-to-one | many orders join to one customer | row count should usually stay the same |
 | one-to-many | one order joins to many order items | row count usually increases |
 | one-to-one | one product joins to one product detail row | row count should stay the same |
@@ -1071,7 +1071,7 @@ The key lesson:
 Duplicate checks and `anti_join()` checks answer different questions.
 
 | Check type | Main question | Example |
-|------------------------|------------------------|------------------------|
+|----|----|----|
 | duplicate check | Does this ID appear more often than expected? | duplicate `customer_id` in customers |
 | duplicate combination check | Does this combination appear more often than expected? | duplicate `order_id + product_id` in order_items |
 | `anti_join()` check | Which rows have no match in another table? | orders with unknown customers |
@@ -1088,10 +1088,6 @@ Professional data quality checklist:
 6.  Investigate suspicious results before calculating KPIs.
 7.  Save important checks as data quality reports later in the pipeline.
 
-
-
-
-
 # Top 3 pitfalls when using `left_join()`
 
 A `left_join()` is one of the most useful tools in data analysis, but it can also silently create wrong results if I do not check the data carefully.
@@ -1100,8 +1096,10 @@ A `left_join()` keeps all rows from the left table and adds matching columns fro
 
 Example:
 
-    orders %>%
-      left_join(customers, by = "customer_id")
+```         
+orders %>%
+  left_join(customers, by = "customer_id")
+```
 
 This means:
 
@@ -1109,7 +1107,7 @@ This means:
 
 The dangerous part is that the code may run without an error, even when the result is logically wrong.
 
----
+------------------------------------------------------------------------
 
 ## Pitfall 1: Duplicate keys in the right table can multiply rows
 
@@ -1122,10 +1120,10 @@ Example:
 `orders` table:
 
 | order_id | customer_id | revenue |
-|---|---|---:|
-| O001 | C001 | 100 |
-| O002 | C002 | 200 |
-| O003 | C001 | 150 |
+|----------|-------------|--------:|
+| O001     | C001        |     100 |
+| O002     | C002        |     200 |
+| O003     | C001        |     150 |
 
 Grain:
 
@@ -1133,11 +1131,11 @@ Grain:
 
 `customers` table:
 
-| customer_id | country | segment |
-|---|---|---|
-| C001 | Germany | Returning |
-| C001 | Germany | VIP |
-| C002 | France | New |
+| customer_id | country | segment   |
+|-------------|---------|-----------|
+| C001        | Germany | Returning |
+| C001        | Germany | VIP       |
+| C002        | France  | New       |
 
 Grain problem:
 
@@ -1145,20 +1143,22 @@ Grain problem:
 
 If I run:
 
-    orders_joined <- orders %>%
-      left_join(customers, by = "customer_id")
+```         
+orders_joined <- orders %>%
+  left_join(customers, by = "customer_id")
+```
 
 Then every order from `C001` matches two customer rows.
 
 The result becomes:
 
-| order_id | customer_id | revenue | country | segment |
-|---|---|---:|---|---|
-| O001 | C001 | 100 | Germany | Returning |
-| O001 | C001 | 100 | Germany | VIP |
-| O002 | C002 | 200 | France | New |
-| O003 | C001 | 150 | Germany | Returning |
-| O003 | C001 | 150 | Germany | VIP |
+| order_id | customer_id | revenue | country | segment   |
+|----------|-------------|--------:|---------|-----------|
+| O001     | C001        |     100 | Germany | Returning |
+| O001     | C001        |     100 | Germany | VIP       |
+| O002     | C002        |     200 | France  | New       |
+| O003     | C001        |     150 | Germany | Returning |
+| O003     | C001        |     150 | Germany | VIP       |
 
 Now the row count increased from 3 to 5.
 
@@ -1166,23 +1166,31 @@ This can inflate KPIs.
 
 For example, if I calculate total revenue after the join:
 
-    sum(orders_joined$revenue)
+```         
+sum(orders_joined$revenue)
+```
 
 I would get:
 
-    100 + 100 + 200 + 150 + 150 = 700
+```         
+100 + 100 + 200 + 150 + 150 = 700
+```
 
 But the true revenue was:
 
-    100 + 200 + 150 = 450
+```         
+100 + 200 + 150 = 450
+```
 
 ### How to check before joining
 
 Before joining, check whether the right-side join key is unique:
 
-    customers %>%
-      count(customer_id) %>%
-      filter(n > 1)
+```         
+customers %>%
+  count(customer_id) %>%
+  filter(n > 1)
+```
 
 If this returns rows, the right table has duplicate keys.
 
@@ -1190,7 +1198,7 @@ If this returns rows, the right table has duplicate keys.
 
 > Before a `left_join()`, always check whether the right table has duplicate keys. Duplicate keys can multiply rows and inflate KPIs.
 
----
+------------------------------------------------------------------------
 
 ## Pitfall 2: Unmatched keys create missing values after the join
 
@@ -1205,30 +1213,32 @@ Example:
 `orders` table:
 
 | order_id | customer_id | revenue |
-|---|---|---:|
-| O001 | C001 | 100 |
-| O002 | C002 | 200 |
-| O003 | C999 | 150 |
+|----------|-------------|--------:|
+| O001     | C001        |     100 |
+| O002     | C002        |     200 |
+| O003     | C999        |     150 |
 
 `customers` table:
 
-| customer_id | country | segment |
-|---|---|---|
-| C001 | Germany | Returning |
-| C002 | France | New |
+| customer_id | country | segment   |
+|-------------|---------|-----------|
+| C001        | Germany | Returning |
+| C002        | France  | New       |
 
 If I run:
 
-    orders_joined <- orders %>%
-      left_join(customers, by = "customer_id")
+```         
+orders_joined <- orders %>%
+  left_join(customers, by = "customer_id")
+```
 
 The result is:
 
-| order_id | customer_id | revenue | country | segment |
-|---|---|---:|---|---|
-| O001 | C001 | 100 | Germany | Returning |
-| O002 | C002 | 200 | France | New |
-| O003 | C999 | 150 | NA | NA |
+| order_id | customer_id | revenue | country | segment   |
+|----------|-------------|--------:|---------|-----------|
+| O001     | C001        |     100 | Germany | Returning |
+| O002     | C002        |     200 | France  | New       |
+| O003     | C999        |     150 | NA      | NA        |
 
 Order `O003` stays in the table because `left_join()` keeps all rows from `orders`.
 
@@ -1240,33 +1250,37 @@ This can affect KPI reporting.
 
 For example, if I calculate revenue by country:
 
-    orders_joined %>%
-      group_by(country) %>%
-      summarise(revenue = sum(revenue), .groups = "drop")
+```         
+orders_joined %>%
+  group_by(country) %>%
+  summarise(revenue = sum(revenue), .groups = "drop")
+```
 
 I may get a missing country group:
 
 | country | revenue |
-|---|---:|
-| Germany | 100 |
-| France | 200 |
-| NA | 150 |
+|---------|--------:|
+| Germany |     100 |
+| France  |     200 |
+| NA      |     150 |
 
 This is important because the missing match may mean:
 
-- wrong customer ID
-- customer table not fully loaded
-- typo in the key
-- deleted customer record
-- wrong ID format
-- source-system problem
+-   wrong customer ID
+-   customer table not fully loaded
+-   typo in the key
+-   deleted customer record
+-   wrong ID format
+-   source-system problem
 
 ### How to check before joining
 
 Use `anti_join()` to find left-table rows with no match in the right table:
 
-    orders %>%
-      anti_join(customers, by = "customer_id")
+```         
+orders %>%
+  anti_join(customers, by = "customer_id")
+```
 
 This returns orders whose `customer_id` does not exist in `customers`.
 
@@ -1274,7 +1288,7 @@ This returns orders whose `customer_id` does not exist in `customers`.
 
 > A `left_join()` does not remove unmatched rows. It keeps them and fills right-side columns with `NA`. Always check unmatched keys before trusting the joined result.
 
----
+------------------------------------------------------------------------
 
 ## Pitfall 3: Joining tables at different grains can repeat values and cause overcounting
 
@@ -1288,12 +1302,12 @@ Example:
 
 `orders` table:
 
-| order_id | month | sales_channel | revenue |
-|---|---|---|---:|
-| O001 | 2026-03 | Paid Search | 100 |
-| O002 | 2026-03 | Paid Search | 200 |
-| O003 | 2026-03 | Social | 150 |
-| O004 | 2026-03 | Paid Search | 120 |
+| order_id | month   | sales_channel | revenue |
+|----------|---------|---------------|--------:|
+| O001     | 2026-03 | Paid Search   |     100 |
+| O002     | 2026-03 | Paid Search   |     200 |
+| O003     | 2026-03 | Social        |     150 |
+| O004     | 2026-03 | Paid Search   |     120 |
 
 Grain:
 
@@ -1301,10 +1315,10 @@ Grain:
 
 `marketing_spend` table:
 
-| month | sales_channel | spend |
-|---|---|---:|
-| 2026-03 | Paid Search | 2600 |
-| 2026-03 | Social | 1500 |
+| month   | sales_channel | spend |
+|---------|---------------|------:|
+| 2026-03 | Paid Search   |  2600 |
+| 2026-03 | Social        |  1500 |
 
 Grain:
 
@@ -1312,31 +1326,39 @@ Grain:
 
 If I join marketing spend directly to orders:
 
-    orders_with_spend <- orders %>%
-      left_join(marketing_spend, by = c("month", "sales_channel"))
+```         
+orders_with_spend <- orders %>%
+  left_join(marketing_spend, by = c("month", "sales_channel"))
+```
 
 The result is:
 
-| order_id | month | sales_channel | revenue | spend |
-|---|---|---|---:|---:|
-| O001 | 2026-03 | Paid Search | 100 | 2600 |
-| O002 | 2026-03 | Paid Search | 200 | 2600 |
-| O003 | 2026-03 | Social | 150 | 1500 |
-| O004 | 2026-03 | Paid Search | 120 | 2600 |
+| order_id | month   | sales_channel | revenue | spend |
+|----------|---------|---------------|--------:|------:|
+| O001     | 2026-03 | Paid Search   |     100 |  2600 |
+| O002     | 2026-03 | Paid Search   |     200 |  2600 |
+| O003     | 2026-03 | Social        |     150 |  1500 |
+| O004     | 2026-03 | Paid Search   |     120 |  2600 |
 
 The Paid Search spend of `2600` appears three times because there are three Paid Search orders.
 
 If I now calculate:
 
-    sum(orders_with_spend$spend)
+```         
+sum(orders_with_spend$spend)
+```
 
 I get:
 
-    2600 + 2600 + 1500 + 2600 = 9300
+```         
+2600 + 2600 + 1500 + 2600 = 9300
+```
 
 But the real marketing spend was:
 
-    2600 + 1500 = 4100
+```         
+2600 + 1500 = 4100
+```
 
 The spend was overcounted because monthly channel-level data was repeated across order-level rows.
 
@@ -1344,13 +1366,15 @@ The spend was overcounted because monthly channel-level data was repeated across
 
 First aggregate orders to the same grain as marketing spend:
 
-    orders_month_channel <- orders %>%
-      group_by(month, sales_channel) %>%
-      summarise(
-        revenue = sum(revenue),
-        orders = n_distinct(order_id),
-        .groups = "drop"
-      )
+```         
+orders_month_channel <- orders %>%
+  group_by(month, sales_channel) %>%
+  summarise(
+    revenue = sum(revenue),
+    orders = n_distinct(order_id),
+    .groups = "drop"
+  )
+```
 
 Now the grain is:
 
@@ -1358,48 +1382,52 @@ Now the grain is:
 
 Then join:
 
-    marketing_report <- orders_month_channel %>%
-      left_join(marketing_spend, by = c("month", "sales_channel"))
+```         
+marketing_report <- orders_month_channel %>%
+  left_join(marketing_spend, by = c("month", "sales_channel"))
+```
 
 The result is safer:
 
-| month | sales_channel | revenue | orders | spend |
-|---|---|---:|---:|---:|
-| 2026-03 | Paid Search | 420 | 3 | 2600 |
-| 2026-03 | Social | 150 | 1 | 1500 |
+| month   | sales_channel | revenue | orders | spend |
+|---------|---------------|--------:|-------:|------:|
+| 2026-03 | Paid Search   |     420 |      3 |  2600 |
+| 2026-03 | Social        |     150 |      1 |  1500 |
 
 Now I can calculate metrics like ROAS more safely:
 
-    marketing_report %>%
-      mutate(roas = revenue / spend)
+```         
+marketing_report %>%
+  mutate(roas = revenue / spend)
+```
 
 ### Key lesson
 
 > Be careful when joining aggregated data to detailed data. Values like marketing spend, monthly targets, or budgets can be repeated across many rows and become overcounted.
 
----
+------------------------------------------------------------------------
 
 # Professional checklist before using `left_join()`
 
 Before every `left_join()`, I should ask:
 
-1. What is the grain of the left table?
-2. What is the grain of the right table?
-3. What should one row represent after the join?
-4. Is the join key unique in the right table?
-5. Are there unmatched keys?
-6. Should the row count stay the same or increase?
-7. Are any values from the right table being repeated across many rows?
-8. Could this join inflate KPIs such as revenue, orders, customers, marketing spend, CAC, or ROAS?
+1.  What is the grain of the left table?
+2.  What is the grain of the right table?
+3.  What should one row represent after the join?
+4.  Is the join key unique in the right table?
+5.  Are there unmatched keys?
+6.  Should the row count stay the same or increase?
+7.  Are any values from the right table being repeated across many rows?
+8.  Could this join inflate KPIs such as revenue, orders, customers, marketing spend, CAC, or ROAS?
 
----
+------------------------------------------------------------------------
 
 # Summary
 
 The top 3 pitfalls when using `left_join()` are:
 
 | Pitfall | Why it is dangerous | How to check |
-|---|---|---|
+|----|----|----|
 | Duplicate keys in the right table | Can multiply rows and inflate KPIs | `count(key) %>% filter(n > 1)` |
 | Unmatched keys | Creates `NA` values after the join | `anti_join()` |
 | Joining at the wrong grain | Can repeat aggregated values and cause overcounting | Check grain before and after the join |
@@ -1408,4 +1436,217 @@ Most important rule:
 
 > A `left_join()` can run successfully but still produce a wrong analytical table. Always check duplicate keys, unmatched keys, row counts, and grain before trusting the result.
 
+# `right_join()` examples
 
+A `right_join()` keeps all rows from the right table and adds matching columns from the left table.
+
+In R:
+
+```         
+left_table %>%
+  right_join(right_table, by = "key_column")
+```
+
+This means:
+
+> Keep every row from the right table, even if there is no match in the left table.
+
+In practice, I will probably use `left_join()` more often because it is usually easier to think from left to right. But `right_join()` is useful to understand because it shows the same join logic from the opposite direction.
+
+Important idea:
+
+> `right_join(a, b)` is usually similar to `left_join(b, a)`.
+
+------------------------------------------------------------------------
+
+## Example 1: Keep all customers, even customers with no orders
+
+### Table structures
+
+Suppose I have an `orders` table.
+
+Grain:
+
+> one row per order
+
+| order_id | customer_id | revenue |
+|----------|-------------|--------:|
+| O001     | C001        |     100 |
+| O002     | C002        |     200 |
+| O003     | C001        |     150 |
+
+Now suppose I have a `customers` table.
+
+Grain:
+
+> one row per customer
+
+| customer_id | country | segment   |
+|-------------|---------|-----------|
+| C001        | Germany | Returning |
+| C002        | France  | New       |
+| C003        | Spain   | VIP       |
+
+Notice that customer `C003` exists in the customer table, but has no order.
+
+------------------------------------------------------------------------
+
+### R code
+
+```         
+orders_with_all_customers <- orders %>%
+  right_join(customers, by = "customer_id")
+
+orders_with_all_customers
+```
+
+------------------------------------------------------------------------
+
+### Result
+
+| order_id | customer_id | revenue | country | segment   |
+|----------|-------------|--------:|---------|-----------|
+| O001     | C001        |     100 | Germany | Returning |
+| O003     | C001        |     150 | Germany | Returning |
+| O002     | C002        |     200 | France  | New       |
+| NA       | C003        |      NA | Spain   | VIP       |
+
+------------------------------------------------------------------------
+
+### Explanation
+
+The right table is `customers`.
+
+Because this is a `right_join()`, R keeps every row from `customers`.
+
+That means customer `C003` stays in the result, even though there is no matching order.
+
+The order columns become `NA` for `C003` because that customer has no order.
+
+This can be useful if I want to answer a question like:
+
+> Which customers have never ordered?
+
+But in practice, I would usually write this as a `left_join()` instead because it is easier to read:
+
+```         
+customers %>%
+  left_join(orders, by = "customer_id")
+```
+
+This gives the same idea:
+
+> Keep all customers and add order information where available.
+
+------------------------------------------------------------------------
+
+### Key lesson
+
+> A `right_join()` keeps all rows from the right table. In this example, it keeps all customers, including customers without orders.
+
+------------------------------------------------------------------------
+
+## Example 2: Keep all products, even products that were never sold
+
+### Table structures
+
+Suppose I have an `order_items` table.
+
+Grain:
+
+> one row per product inside an order
+
+| order_id | product_id | quantity |
+|----------|------------|---------:|
+| O001     | P001       |        1 |
+| O001     | P002       |        2 |
+| O002     | P001       |        1 |
+| O003     | P003       |        3 |
+
+Now suppose I have a `products` table.
+
+Grain:
+
+> one row per product
+
+| product_id | category    | brand  |
+|------------|-------------|--------|
+| P001       | Electronics | BrandA |
+| P002       | Home        | BrandB |
+| P003       | Beauty      | BrandC |
+| P004       | Sports      | BrandD |
+
+Notice that product `P004` exists in the product table, but it never appears in `order_items`.
+
+That means product `P004` was not sold in this sample.
+
+------------------------------------------------------------------------
+
+### R code
+
+```         
+items_with_all_products <- order_items %>%
+  right_join(products, by = "product_id")
+
+items_with_all_products
+```
+
+------------------------------------------------------------------------
+
+### Result
+
+| order_id | product_id | quantity | category    | brand  |
+|----------|------------|---------:|-------------|--------|
+| O001     | P001       |        1 | Electronics | BrandA |
+| O002     | P001       |        1 | Electronics | BrandA |
+| O001     | P002       |        2 | Home        | BrandB |
+| O003     | P003       |        3 | Beauty      | BrandC |
+| NA       | P004       |       NA | Sports      | BrandD |
+
+------------------------------------------------------------------------
+
+### Explanation
+
+The right table is `products`.
+
+Because this is a `right_join()`, R keeps every row from `products`.
+
+That means product `P004` stays in the result, even though it has no matching row in `order_items`.
+
+The order-related columns become `NA` because there was no order item for that product.
+
+This can be useful if I want to answer:
+
+> Which products are listed but have never been sold?
+
+Again, I would usually write this as a `left_join()` because it is easier to understand:
+
+```         
+products %>%
+  left_join(order_items, by = "product_id")
+```
+
+This means:
+
+> Keep all products and add order item information where available.
+
+------------------------------------------------------------------------
+
+### Key lesson
+
+> A `right_join()` can be used to keep all rows from a lookup or dimension table, such as products, even when some products have no matching sales records.
+
+------------------------------------------------------------------------
+
+# Summary
+
+| Join | What it keeps | Example use |
+|----|----|----|
+| `left_join(orders, customers)` | all orders | keep every order and add customer info |
+| `right_join(orders, customers)` | all customers | keep every customer, even customers with no orders |
+| `left_join(order_items, products)` | all order items | keep every sold item and add product info |
+| `right_join(order_items, products)` | all products | keep every product, even products with no sales |
+
+Most important rule:
+
+> A `right_join()` keeps all rows from the right table. But in real work, I can usually rewrite it as a `left_join()` by switching the table order, which often makes the code easier to read.
