@@ -625,7 +625,7 @@ The key lesson:
 Before every join, I should identify the relationship:
 
 | Join type | Example | Expected row-count behavior |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | many-to-one | many orders join to one customer | row count should usually stay the same |
 | one-to-many | one order joins to many order items | row count usually increases |
 | one-to-one | one product joins to one product detail row | row count should stay the same |
@@ -1071,7 +1071,7 @@ The key lesson:
 Duplicate checks and `anti_join()` checks answer different questions.
 
 | Check type | Main question | Example |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | duplicate check | Does this ID appear more often than expected? | duplicate `customer_id` in customers |
 | duplicate combination check | Does this combination appear more often than expected? | duplicate `order_id + product_id` in order_items |
 | `anti_join()` check | Which rows have no match in another table? | orders with unknown customers |
@@ -1427,7 +1427,7 @@ Before every `left_join()`, I should ask:
 The top 3 pitfalls when using `left_join()` are:
 
 | Pitfall | Why it is dangerous | How to check |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | Duplicate keys in the right table | Can multiply rows and inflate KPIs | `count(key) %>% filter(n > 1)` |
 | Unmatched keys | Creates `NA` values after the join | `anti_join()` |
 | Joining at the wrong grain | Can repeat aggregated values and cause overcounting | Check grain before and after the join |
@@ -1641,7 +1641,7 @@ This means:
 # Summary
 
 | Join | What it keeps | Example use |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | `left_join(orders, customers)` | all orders | keep every order and add customer info |
 | `right_join(orders, customers)` | all customers | keep every customer, even customers with no orders |
 | `left_join(order_items, products)` | all order items | keep every sold item and add product info |
@@ -1650,3 +1650,313 @@ This means:
 Most important rule:
 
 > A `right_join()` keeps all rows from the right table. But in real work, I can usually rewrite it as a `left_join()` by switching the table order, which often makes the code easier to read.
+
+
+
+# Pivot examples: `pivot_longer()` and `pivot_wider()`
+
+Pivoting means reshaping a table.
+
+There are two main directions:
+
+| Function | Meaning |
+|---|---|
+| `pivot_longer()` | wide table → long table |
+| `pivot_wider()` | long table → wide table |
+
+The most important thing to remember:
+
+> Pivoting changes the shape of the table and often changes the grain.
+
+---
+
+# Example 1: `pivot_longer()` — wide marketing table to long marketing table
+
+## Starting table: wide format
+
+Suppose I have this marketing spend table:
+
+| month | paid_search_spend | social_spend | email_spend |
+|---|---:|---:|---:|
+| 2026-01 | 2000 | 1200 | 300 |
+| 2026-02 | 2400 | 1300 | 350 |
+| 2026-03 | 2600 | 1500 | 400 |
+
+The grain of this table is:
+
+> one row per month
+
+Each marketing channel is stored as a separate column.
+
+This is called a wide table because the table grows horizontally with more columns.
+
+## Goal
+
+I want to reshape the table so that the marketing channels are stored in one column called `channel`, and the spend values are stored in one column called `spend`.
+
+That means I want this structure:
+
+| month | channel | spend |
+|---|---|---:|
+| 2026-01 | paid_search_spend | 2000 |
+| 2026-01 | social_spend | 1200 |
+| 2026-01 | email_spend | 300 |
+| 2026-02 | paid_search_spend | 2400 |
+| 2026-02 | social_spend | 1300 |
+| 2026-02 | email_spend | 350 |
+| 2026-03 | paid_search_spend | 2600 |
+| 2026-03 | social_spend | 1500 |
+| 2026-03 | email_spend | 400 |
+
+Now the grain is:
+
+> one row per month and channel
+
+So the table changed from 3 rows to 9 rows.
+
+This is not a duplicate problem. It is expected because each month now appears once for every channel.
+
+## R code
+
+    marketing_long <- marketing_wide %>%
+      pivot_longer(
+        cols = c(paid_search_spend, social_spend, email_spend),
+        names_to = "channel",
+        values_to = "spend"
+      )
+
+## Explanation of the code
+
+This part:
+
+    cols = c(paid_search_spend, social_spend, email_spend)
+
+tells R which columns should be gathered into a longer format.
+
+This part:
+
+    names_to = "channel"
+
+means:
+
+> Take the old column names and put them into a new column called `channel`.
+
+So these old column names:
+
+| old column name |
+|---|
+| paid_search_spend |
+| social_spend |
+| email_spend |
+
+become values inside the new `channel` column.
+
+This part:
+
+    values_to = "spend"
+
+means:
+
+> Take the numbers from the old columns and put them into a new column called `spend`.
+
+So the values 2000, 1200, 300, and so on move into one shared value column.
+
+## Why this is useful
+
+Long format is usually better for:
+
+- plotting with `ggplot2`
+- grouping and summarising
+- filtering specific channels
+- joining to other long tables
+- SQL-style thinking
+- dashboards
+
+For example, after pivoting longer, I can easily calculate total spend by channel:
+
+    marketing_long %>%
+      group_by(channel) %>%
+      summarise(
+        total_spend = sum(spend),
+        .groups = "drop"
+      )
+
+## Key lesson
+
+> `pivot_longer()` turns column names into row values. It usually makes the table taller and changes the grain from something like “one row per month” to “one row per month-channel”.
+
+---
+
+# Example 2: `pivot_wider()` — long KPI table to wide report table
+
+## Starting table: long format
+
+Suppose I have this KPI table:
+
+| segment | metric | value |
+|---|---|---:|
+| New | gmv | 500 |
+| New | orders | 10 |
+| New | customers | 8 |
+| Returning | gmv | 1200 |
+| Returning | orders | 20 |
+| Returning | customers | 12 |
+| VIP | gmv | 2000 |
+| VIP | orders | 15 |
+| VIP | customers | 6 |
+
+The grain of this table is:
+
+> one row per segment and metric
+
+That means each customer segment appears multiple times because each segment has multiple metrics.
+
+For example, `New` appears once for `gmv`, once for `orders`, and once for `customers`.
+
+## Goal
+
+I want one row per customer segment, with each metric as its own column.
+
+I want this:
+
+| segment | gmv | orders | customers |
+|---|---:|---:|---:|
+| New | 500 | 10 | 8 |
+| Returning | 1200 | 20 | 12 |
+| VIP | 2000 | 15 | 6 |
+
+Now the grain is:
+
+> one row per segment
+
+So the table changed from 9 rows to 3 rows.
+
+This is often better for stakeholder reports because it is easier to read.
+
+## R code
+
+    segment_kpis_wide <- segment_kpis_long %>%
+      pivot_wider(
+        names_from = metric,
+        values_from = value
+      )
+
+## Explanation of the code
+
+This part:
+
+    names_from = metric
+
+means:
+
+> Take the values from the `metric` column and turn them into new column names.
+
+So these values:
+
+| metric |
+|---|
+| gmv |
+| orders |
+| customers |
+
+become columns:
+
+| gmv | orders | customers |
+|---:|---:|---:|
+
+This part:
+
+    values_from = value
+
+means:
+
+> Fill the new columns with the numbers from the `value` column.
+
+So the value for `New` and `gmv` becomes the number in the `gmv` column for the `New` row.
+
+## Why this is useful
+
+Wide format is usually better for:
+
+- final report tables
+- Excel exports
+- stakeholder summaries
+- comparing several KPIs side by side
+- making a compact business table
+
+For example, this format is easier to read in a report:
+
+| segment | gmv | orders | customers |
+|---|---:|---:|---:|
+| New | 500 | 10 | 8 |
+| Returning | 1200 | 20 | 12 |
+| VIP | 2000 | 15 | 6 |
+
+## Key lesson
+
+> `pivot_wider()` turns row values into column names. It usually makes the table wider and changes the grain from something like “one row per segment-metric” to “one row per segment”.
+
+---
+
+# Simple visual summary
+
+## `pivot_longer()`
+
+Wide table:
+
+| month | paid_search_spend | social_spend | email_spend |
+|---|---:|---:|---:|
+| 2026-01 | 2000 | 1200 | 300 |
+
+Becomes long table:
+
+| month | channel | spend |
+|---|---|---:|
+| 2026-01 | paid_search_spend | 2000 |
+| 2026-01 | social_spend | 1200 |
+| 2026-01 | email_spend | 300 |
+
+Main idea:
+
+> Columns become rows.
+
+---
+
+## `pivot_wider()`
+
+Long table:
+
+| segment | metric | value |
+|---|---|---:|
+| New | gmv | 500 |
+| New | orders | 10 |
+| New | customers | 8 |
+
+Becomes wide table:
+
+| segment | gmv | orders | customers |
+|---|---:|---:|---:|
+| New | 500 | 10 | 8 |
+
+Main idea:
+
+> Rows become columns.
+
+---
+
+# Most important rule
+
+Before and after pivoting, I should ask:
+
+> What does one row represent now?
+
+Pivoting is not just cosmetic. It changes the structure of the table.
+
+Examples:
+
+| Before | After |
+|---|---|
+| one row per month | one row per month-channel |
+| one row per segment-metric | one row per segment |
+
+If I understand the grain before and after pivoting, I can avoid confusion when plotting, summarising, or joining data later.
