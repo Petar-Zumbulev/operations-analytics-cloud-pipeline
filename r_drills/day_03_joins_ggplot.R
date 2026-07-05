@@ -482,3 +482,4 @@ cat("\nDay 3 complete!\n")
 cat("Created KPI tables in outputs/tables/\n")
 cat("Created plots in outputs/figures/\n")
 cat("Most important lesson: always check duplicate keys and row counts before/after joins.\n")
+

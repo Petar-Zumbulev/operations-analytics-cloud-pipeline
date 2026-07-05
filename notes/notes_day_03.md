@@ -1960,3 +1960,292 @@ Examples:
 | one row per segment-metric | one row per segment |
 
 If I understand the grain before and after pivoting, I can avoid confusion when plotting, summarising, or joining data later.
+
+# `group_by()` + `mutate()` examples
+
+## Main idea
+
+`group_by()` tells R:
+
+> Do the next calculation separately for each group.
+
+`mutate()` tells R:
+
+> Add a new column, while keeping the same number of rows.
+
+So when I use them together:
+
+    data %>%
+      group_by(group_column) %>%
+      mutate(new_column = calculation)
+
+I am saying:
+
+> For each group, calculate something and add the result back to every row in that group.
+
+Important difference:
+
+| Function | What it does to row count |
+|---|---|
+| `mutate()` | keeps the same number of rows |
+| `summarise()` | reduces the data to one row per group |
+
+---
+
+## Example 1: Customer total revenue and order share
+
+### Starting table: `orders`
+
+Grain:
+
+> one row per order
+
+| order_id | customer_id | revenue |
+|---|---|---:|
+| O001 | C001 | 100 |
+| O002 | C001 | 200 |
+| O003 | C002 | 150 |
+| O004 | C002 | 50 |
+| O005 | C003 | 300 |
+
+Question:
+
+> For each order, how much total revenue did that customer generate, and what share of the customer's revenue came from this order?
+
+---
+
+### R code
+
+    orders_with_customer_revenue <- orders %>%
+      group_by(customer_id) %>%
+      mutate(
+        customer_total_revenue = sum(revenue),
+        order_share_of_customer_revenue = revenue / customer_total_revenue
+      ) %>%
+      ungroup()
+
+---
+
+### Result
+
+| order_id | customer_id | revenue | customer_total_revenue | order_share_of_customer_revenue |
+|---|---|---:|---:|---:|
+| O001 | C001 | 100 | 300 | 0.333 |
+| O002 | C001 | 200 | 300 | 0.667 |
+| O003 | C002 | 150 | 200 | 0.750 |
+| O004 | C002 | 50 | 200 | 0.250 |
+| O005 | C003 | 300 | 300 | 1.000 |
+
+---
+
+### Explanation
+
+This part:
+
+    group_by(customer_id)
+
+splits the table into customer groups.
+
+So R thinks:
+
+| customer_id | Rows in group |
+|---|---|
+| C001 | O001, O002 |
+| C002 | O003, O004 |
+| C003 | O005 |
+
+Then this part:
+
+    customer_total_revenue = sum(revenue)
+
+calculates the total revenue separately for each customer.
+
+For customer `C001`:
+
+    100 + 200 = 300
+
+For customer `C002`:
+
+    150 + 50 = 200
+
+For customer `C003`:
+
+    300 = 300
+
+Then this part:
+
+    order_share_of_customer_revenue = revenue / customer_total_revenue
+
+calculates how important each order was for that customer's total revenue.
+
+Example for order `O001`:
+
+    100 / 300 = 0.333
+
+Example for order `O002`:
+
+    200 / 300 = 0.667
+
+The key point:
+
+> `mutate()` keeps every original order row, but adds customer-level information to each row.
+
+This is useful when I want row-level data plus group-level context.
+
+---
+
+## Example 2: Order item revenue and share inside each order
+
+### Starting table: `order_items`
+
+Grain:
+
+> one row per product inside an order
+
+| order_id | product_id | quantity | unit_price |
+|---|---|---:|---:|
+| O001 | P001 | 1 | 50 |
+| O001 | P002 | 2 | 20 |
+| O002 | P001 | 1 | 50 |
+| O002 | P003 | 3 | 10 |
+| O003 | P004 | 1 | 100 |
+
+Question:
+
+> For each product line, what is the line revenue, what is the total order revenue, and what share of the order revenue came from this product?
+
+---
+
+### R code
+
+    order_items_with_shares <- order_items %>%
+      mutate(
+        line_revenue = quantity * unit_price
+      ) %>%
+      group_by(order_id) %>%
+      mutate(
+        order_total_revenue = sum(line_revenue),
+        item_share_of_order_revenue = line_revenue / order_total_revenue
+      ) %>%
+      ungroup()
+
+---
+
+### Result
+
+| order_id | product_id | quantity | unit_price | line_revenue | order_total_revenue | item_share_of_order_revenue |
+|---|---|---:|---:|---:|---:|---:|
+| O001 | P001 | 1 | 50 | 50 | 90 | 0.556 |
+| O001 | P002 | 2 | 20 | 40 | 90 | 0.444 |
+| O002 | P001 | 1 | 50 | 50 | 80 | 0.625 |
+| O002 | P003 | 3 | 10 | 30 | 80 | 0.375 |
+| O003 | P004 | 1 | 100 | 100 | 100 | 1.000 |
+
+---
+
+### Explanation
+
+First, this part creates `line_revenue`:
+
+    mutate(
+      line_revenue = quantity * unit_price
+    )
+
+This happens row by row.
+
+For example:
+
+| order_id | product_id | calculation | line_revenue |
+|---|---|---|---:|
+| O001 | P001 | 1 × 50 | 50 |
+| O001 | P002 | 2 × 20 | 40 |
+
+Then this part:
+
+    group_by(order_id)
+
+tells R to calculate the next values separately for each order.
+
+So R groups the data like this:
+
+| order_id | Rows in group |
+|---|---|
+| O001 | P001, P002 |
+| O002 | P001, P003 |
+| O003 | P004 |
+
+Then this part:
+
+    order_total_revenue = sum(line_revenue)
+
+calculates the total revenue for each order.
+
+For order `O001`:
+
+    50 + 40 = 90
+
+For order `O002`:
+
+    50 + 30 = 80
+
+For order `O003`:
+
+    100 = 100
+
+Then this part:
+
+    item_share_of_order_revenue = line_revenue / order_total_revenue
+
+calculates how much each product contributed to the order total.
+
+For `O001`, product `P001`:
+
+    50 / 90 = 0.556
+
+For `O001`, product `P002`:
+
+    40 / 90 = 0.444
+
+The key point:
+
+> `group_by(order_id)` makes the total revenue calculation happen inside each order, not across the whole table.
+
+---
+
+## Why `group_by()` + `mutate()` is useful
+
+`group_by()` + `mutate()` is useful when I want to keep the original row-level data, but add group-level context.
+
+Examples:
+
+| Goal | Group by | New column with `mutate()` |
+|---|---|---|
+| Customer total revenue on every order row | `customer_id` | `customer_total_revenue` |
+| Product share inside each order | `order_id` | `item_share_of_order_revenue` |
+| Monthly average order value on each order | `month` | `monthly_avg_revenue` |
+| Category average price on each product | `category` | `category_avg_price` |
+
+---
+
+## Most important rule
+
+> `group_by()` changes how calculations are performed. `mutate()` adds the result back to each original row.
+
+So:
+
+    group_by(customer_id) %>%
+    mutate(customer_total_revenue = sum(revenue))
+
+means:
+
+> For each customer, calculate total revenue and write that customer total onto every order row belonging to that customer.
+
+And:
+
+    group_by(order_id) %>%
+    mutate(order_total_revenue = sum(line_revenue))
+
+means:
+
+> For each order, calculate total order revenue and write that order total onto every product row belonging to that order.
+
